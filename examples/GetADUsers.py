@@ -61,10 +61,8 @@ class GetADUsers:
 
         # Let's calculate the header and format
         self.__header = ["Name", "Email", "PasswordLastSet", "LastLogon"]
-        # Since we won't process all rows at once, this will be fixed lengths
-        self.__colLen = [20, 30, 19, 19]
-        self.__outputFormat = ' '.join(['{%d:%ds} ' % (num, width) for num, width in enumerate(self.__colLen)])
-
+        self.__maxcollen = max(map(len, self.__header)) + 3
+        self.__outputFormat = '  '.join(['{}:{}{{}}\n'.format(col, ' ' * (self.__maxcollen-len(col))) for col in self.__header])
 
 
     def getMachineName(self):
@@ -151,7 +149,6 @@ class GetADUsers:
         logging.info('Querying %s for information about domain.' % self.__target)
         # Print header
         print((self.__outputFormat.format(*self.__header)))
-        print(('  '.join(['-' * itemLen for itemLen in self.__colLen])))
 
         # Building the search filter
         if self.__all:
