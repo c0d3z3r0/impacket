@@ -60,8 +60,9 @@ class GetADUsers:
         self.baseDN = self.baseDN[:-1]
 
         # Let's calculate the header and format
-        self.__header = ["Name", "Email", "PasswordLastSet", "LastLogon"]
+        self.__header = ["Name", "Email", "PasswordLastSet", "LastLogon", "Status", "Memberships"]
         self.__maxcollen = max(map(len, self.__header)) + 3
+        self.__indent = ' ' * (self.__maxcollen + 3)
         self.__outputFormat = '  '.join(['{}:{}{{}}\n'.format(col, ' ' * (self.__maxcollen-len(col))) for col in self.__header])
 
 
@@ -92,6 +93,8 @@ class GetADUsers:
         pwdLastSet = ''
         mail = ''
         lastLogon = 'N/A'
+        memberOf = ''
+        status = ''
         try:
             for attribute in item['attributes']:
                 if str(attribute['type']) == 'sAMAccountName':
@@ -110,8 +113,15 @@ class GetADUsers:
                         lastLogon = str(datetime.fromtimestamp(self.getUnixTime(int(str(attribute['vals'][0])))))
                 elif str(attribute['type']) == 'mail':
                     mail = str(attribute['vals'][0])
+                elif str(attribute['type']) == 'memberOf':
+                    memberOf = map(lambda x: x.asOctets().decode('utf-8'), attribute['vals'])
+                    memberOf = map(lambda x: x.split(',')[0].replace('CN=', '').replace('\\', ''), memberOf)
+                    memberOf = '\n{}'.format(self.__indent).join(memberOf)
+                elif str(attribute['type']) == 'userAccountControl':
+                    uacval = int(attribute['vals'][0])
+                    status = ('Enabled', 'Disabled')[(uacval & 2)>>1]
 
-            print((self.__outputFormat.format(*[sAMAccountName, mail, pwdLastSet, lastLogon])))
+            print((self.__outputFormat.format(*[sAMAccountName, mail, pwdLastSet, lastLogon, status, memberOf])))
         except Exception as e:
             logging.debug("Exception", exc_info=True)
             logging.error('Skipping item, cannot process due to error %s' % str(e))
@@ -165,7 +175,7 @@ class GetADUsers:
             logging.debug('Search Filter=%s' % searchFilter)
             sc = ldap.SimplePagedResultsControl(size=100)
             ldapConnection.search(searchFilter=searchFilter,
-                                  attributes=['sAMAccountName', 'pwdLastSet', 'mail', 'lastLogon'],
+                                  attributes=['sAMAccountName', 'pwdLastSet', 'mail', 'lastLogon', 'memberOf', 'userAccountControl'],
                                   sizeLimit=0, searchControls = [sc], perRecordCallback=self.processRecord)
         except ldap.LDAPSearchError:
                 raise
