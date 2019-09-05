@@ -168,7 +168,7 @@ class GetADUsers:
         if self.__all:
             searchFilter = "(&(sAMAccountName=*)(objectCategory=user)"
         else:
-            searchFilter = "(&(sAMAccountName=*)(mail=*)(!(UserAccountControl:1.2.840.113556.1.4.803:=%d))" % UF_ACCOUNTDISABLE
+            searchFilter = "(&(sAMAccountName=*)(objectCategory=user)(!(UserAccountControl:1.2.840.113556.1.4.803:=%d))" % UF_ACCOUNTDISABLE
 
         if self.__requestUser is not None:
             searchFilter += '(sAMAccountName:=%s))' % self.__requestUser
